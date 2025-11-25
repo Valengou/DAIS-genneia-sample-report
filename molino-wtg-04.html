@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Inspección WTG-04</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Cargar model-viewer con fallback para mejor compatibilidad -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <script nomodule src="https://unpkg.com/@google/model-viewer/dist/model-viewer-legacy.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #080E26;
+            --bg-secondary: #A8AFCC;
+            --text-main: #EBECEF;
+            --card-bg: rgba(168, 175, 204, 0.1); /* Versión oscura translúcida de bg-secondary para legibilidad */
+        }
+
+        body { 
+            background-color: var(--bg-primary); 
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card { 
+            background-color: #141b36; /* Fondo oscuro para contraste */
+            border: 1px solid var(--bg-secondary); 
+            color: var(--text-main);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            margin-bottom: 20px; 
+        }
+
+        .header-bg { 
+            background: linear-gradient(90deg, #060b1e 0%, #0f1835 100%); 
+            border-bottom: 1px solid var(--bg-secondary);
+            color: var(--text-main); 
+            padding: 20px 0; 
+        }
+        
+        .list-group-item {
+            background-color: transparent;
+            color: var(--text-main);
+            border-color: rgba(235, 236, 239, 0.2);
+        }
+        .list-group-item:hover {
+            background-color: rgba(168, 175, 204, 0.1);
+            color: white;
+        }
+
+        /* Altura del Mapa */
+        #map { height: 300px; width: 100%; border-radius: 8px; border: 1px solid var(--bg-secondary); }
+        
+        /* Estilos del Visor 3D */
+        model-viewer {
+            width: 100%;
+            height: 500px;
+            background-color: #0b1229;
+            border-radius: 8px;
+            border: 1px solid var(--bg-secondary);
+        }
+
+        /* Estilos de los Hotspots (Marcadores) */
+        .hotspot {
+            display: block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            background-color: #dc3545; /* Rojo para fallas */
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .hotspot:hover { transform: scale(1.2); background-color: #ff0000; }
+        .hotspot.selected { border: 2px solid white; transform: scale(1.4); }
+
+        /* Etiqueta flotante sobre el hotspot */
+        .hotspot-annotation {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            color: #080E26; /* Texto oscuro sobre fondo secundario */
+            display: block;
+            font-family: Futura, Helvetica Neue, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            left: calc(100% + 10px);
+            max-width: 128px;
+            padding: 0.5em 1em;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: max-content;
+            pointer-events: none;
+        }
+        
+        h1, h2, h3, h4, h5, h6, strong {
+            color: #fff;
+        }
+        
+        .text-muted {
+            color: #aab0c7 !important;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="header-bg mb-4">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <img src="logo_dais.png" alt="Drone AI Services" height="60" class="me-3">
+                    <div>
+                        <h1 class="h3 mb-0">Reporte de Inspección Aérea</h1>
+                        <p class="mb-0 opacity-75">Vuelo realizado el: 23 Nov 2025</p>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <a href="index.html" class="btn btn-sm btn-outline-light me-2">← Volver</a>
+                    <span class="badge bg-danger fs-6">ESTADO: REVISIÓN REQUERIDA</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5 class="card-title border-bottom pb-2">Información del Activo</h5>
+                    <ul class="list-unstyled mt-2">
+                        <li><strong>Parque Eólico:</strong> Vientos del Sur</li>
+                        <li><strong>Turbina ID:</strong> WTG-04</li>
+                        <li><strong>Modelo:</strong> Vestas V112</li>
+                        <li><strong>Altura Buje:</strong> 84m</li>
+                        <li><strong>Total Fallas:</strong> <span class="text-danger fw-bold">2 Detectadas</span></li>
+                    </ul>
+                </div>
+
+                <div class="card p-1">
+                    <div id="map"></div>
+                </div>
+
+                <div class="card p-3">
+                    <h5 class="card-title">Registro de Fallas</h5>
+                    <div class="list-group">
+                        <button onclick="focusFault(1)" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Falla #01 - Góndola (Nacelle)
+                            <span class="badge bg-danger rounded-pill">Crítica</span>
+                        </button>
+                        <button onclick="focusFault(2)" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Falla #02 - Pala 1 (Blade Root)
+                            <span class="badge bg-warning text-dark rounded-pill">Leve</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-1">
+                    <model-viewer 
+                        id="windTurbine" 
+                        src="./animated_wind_turbine.glb"
+                        ar 
+                        ar-modes="webxr scene-viewer quick-look" 
+                        camera-controls 
+                        shadow-intensity="1"
+                        auto-rotate
+                        interaction-policy="allow-when-focused"
+                        loading="auto"
+                        reveal="auto"
+                        tone-mapping="commerce"
+                        environment-image="neutral"
+                    >
+                        <button class="hotspot" slot="hotspot-1" 
+                            data-position="137.45438892776673m 5531.630604906083m -57.53479189911741m" 
+                            data-normal="8.271806125530277e-25m 0.999999999999991m -1.343588610839583e-7m"
+                            onclick="showImage('Falla #01 - Góndola (Nacelle)', 'Corrosión avanzada en juntas de paneles y desprendimiento de recubrimiento en Carcasa Superior / Parte Trasera.', 'falla1.jpg')">
+                            <div class="hotspot-annotation">Falla #01</div>
+                        </button>
+
+                        <button class="hotspot" slot="hotspot-2" 
+                            data-position="61.9145839776859m 5516.51103912148m 337.47119459656915m" 
+                            data-normal="0.36761015437789696m 0.9278634699389252m 0.06270690194194099m"
+                            onclick="showImage('Falla #02 - Pala 1', 'Desprendimiento de pintura en la zona de unión con el buje (Raíz de la pala).', 'falla2.jpg')">
+                            <div class="hotspot-annotation">Falla #02</div>
+                        </button>
+
+                        <div class="controls text-center mt-2 mb-2 text-muted small">
+                            Usa el mouse para rotar, scroll para zoom. Haz clic en los puntos rojos.
+                        </div>
+                    </model-viewer>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Título Falla</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalImage" src="" class="img-fluid rounded mb-2" alt="Evidencia" loading="lazy">
+                    <p id="modalDesc" class="text-start text-muted"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Verificar autenticación al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            if (sessionStorage.getItem('authenticated') !== 'true') {
+                // Si no está autenticado, redirigir a la página principal
+                window.location.href = 'index.html';
+            }
+        });
+
+        // 1. Inicializar Mapa (Coordenadas de ejemplo: Parque Eólico en Bahía Blanca aprox)
+        // Esperar a que el DOM esté cargado antes de inicializar el mapa
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar un poco más para asegurar que Leaflet esté cargado
+            setTimeout(function() {
+                if (typeof L !== 'undefined') {
+                    var map = L.map('map').setView([-38.96, -61.35], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap'
+                    }).addTo(map);
+                    L.marker([-38.96, -61.35]).addTo(map).bindPopup("<b>WTG-04</b><br>Inspección en curso.").openPopup();
+                }
+            }, 100);
+        });
+
+        // 2. Lógica del Visor 3D y Modal
+        let modelViewer;
+        let modal;
+        
+        // Esperar a que el DOM esté completamente cargado y model-viewer esté disponible
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar a que model-viewer esté definido
+            if (customElements.get('model-viewer')) {
+                initializeModelViewer();
+            } else {
+                // Si no está disponible, esperar un poco más
+                setTimeout(function() {
+                    if (customElements.get('model-viewer')) {
+                        initializeModelViewer();
+                    } else {
+                        console.error('model-viewer no está disponible');
+                    }
+                }, 1000);
+            }
+        });
+
+        function initializeModelViewer() {
+            modelViewer = document.querySelector("#windTurbine");
+            modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            
+            // Manejar errores de carga del modelo
+            if (modelViewer) {
+                modelViewer.addEventListener('error', function(event) {
+                    console.error('Error al cargar el modelo:', event.detail);
+                });
+                
+                modelViewer.addEventListener('load', function() {
+                    console.log('Modelo cargado correctamente');
+                });
+            }
+        }
+
+        // Función para mostrar modal con imagen
+        function showImage(title, desc, imgSrc) {
+            if (!modal) {
+                modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            }
+            
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            
+            // Usar ruta relativa con ./ para asegurar compatibilidad con GitHub Pages
+            const imgElement = document.getElementById('modalImage');
+            imgElement.src = './' + imgSrc;
+            imgElement.onerror = function() { 
+                this.src = 'https://via.placeholder.com/800x450?text=Imagen+No+Encontrada+(Demo)'; 
+            };
+            
+            modal.show();
+        }
+
+        // Función para enfocar una falla desde la lista lateral
+        function focusFault(id) {
+            if (!modelViewer) {
+                modelViewer = document.querySelector("#windTurbine");
+            }
+            
+            // Seleccionamos el hotspot basado en el slot
+            const hotspot = document.querySelector(`button[slot="hotspot-${id}"]`);
+            
+            if(hotspot && modelViewer) {
+                // Obtenemos la posición del hotspot para mover la cámara
+                const position = hotspot.dataset.position;
+                
+                // Movemos la cámara del modelo hacia esa falla
+                if (position) {
+                    modelViewer.cameraTarget = position;
+                    modelViewer.cameraOrbit = "45deg 55deg 10m"; // Ajustar zoom según necesidad
+                }
+                
+                // Simular clic para abrir la info
+                hotspot.click();
+            }
+        }
+
+        // TRUCO PARA DESARROLLADORES:
+        // Si haces clic en el modelo mientras mantienes SHIFT presionado (o abres la consola),
+        // te mostrará las coordenadas donde hiciste clic para que puedas crear nuevos hotspots.
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const mv = document.querySelector("#windTurbine");
+                if (mv) {
+                    mv.addEventListener('click', (event) => {
+                        // Esto es solo para ayudarte a encontrar las coordenadas x,y,z
+                        // Abre la consola del navegador (F12) y mira los valores al hacer clic en el modelo.
+                        const { clientX, clientY } = event;
+                        if (mv.positionAndNormalFromPoint) {
+                            const hit = mv.positionAndNormalFromPoint(clientX, clientY);
+                            if (hit) {
+                                console.log('Coordenada para copiar en data-position:', hit.position.toString());
+                                console.log('Normal para copiar en data-normal:', hit.normal.toString());
+                            }
+                        }
+                    });
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
+
