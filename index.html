@@ -129,7 +129,7 @@
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
-                    <img src="./logo_dais.png" alt="Drone AI Services" height="60" class="me-3">
+                    <img src="logo_dais.png" alt="Drone AI Services" height="60" class="me-3">
                     <div>
                         <h1 class="h3 mb-0">Reporte de Inspección Aérea</h1>
                         <p class="mb-0 opacity-75">Vuelo realizado el: 23 Nov 2025</p>
@@ -180,7 +180,7 @@
                 <div class="card p-1">
                     <model-viewer 
                         id="windTurbine" 
-                        src="./animated_wind_turbine.glb"
+                        src="animated_wind_turbine.glb"
                         ar 
                         ar-modes="webxr scene-viewer quick-look" 
                         camera-controls 
@@ -190,14 +190,14 @@
                         <button class="hotspot" slot="hotspot-1" 
                             data-position="137.45438892776673m 5531.630604906083m -57.53479189911741m" 
                             data-normal="8.271806125530277e-25m 0.999999999999991m -1.343588610839583e-7m"
-                            onclick="showImage('Falla #01 - Góndola (Nacelle)', 'Corrosión avanzada en juntas de paneles y desprendimiento de recubrimiento en Carcasa Superior / Parte Trasera.', './falla1.jpg')">
+                            onclick="showImage('Falla #01 - Góndola (Nacelle)', 'Corrosión avanzada en juntas de paneles y desprendimiento de recubrimiento en Carcasa Superior / Parte Trasera.', 'falla1.jpg')">
                             <div class="hotspot-annotation">Falla #01</div>
                         </button>
 
                         <button class="hotspot" slot="hotspot-2" 
                             data-position="61.9145839776859m 5516.51103912148m 337.47119459656915m" 
                             data-normal="0.36761015437789696m 0.9278634699389252m 0.06270690194194099m"
-                            onclick="showImage('Falla #02 - Pala 1', 'Desprendimiento de pintura en la zona de unión con el buje (Raíz de la pala).', './falla2.jpg')">
+                            onclick="showImage('Falla #02 - Pala 1', 'Desprendimiento de pintura en la zona de unión con el buje (Raíz de la pala).', 'falla2.jpg')">
                             <div class="hotspot-annotation">Falla #02</div>
                         </button>
 
@@ -236,9 +236,12 @@
             if(pass === 'genneia2025') {
                 const loginScreen = document.getElementById('loginScreen');
                 loginScreen.style.opacity = '0';
-                loginScreen.style.transition = 'opacity 0.5s';
+                loginScreen.style.transition = 'opacity 0.5s ease';
+                
+                // Esperar a la transición y luego eliminar del flujo
                 setTimeout(() => {
                     loginScreen.style.display = 'none';
+                    loginScreen.remove(); // Lo eliminamos del DOM para asegurar que no bloquee nada
                 }, 500);
             } else {
                 document.getElementById('errorMsg').style.display = 'block';
